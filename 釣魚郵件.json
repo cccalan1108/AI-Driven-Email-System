@@ -1,0 +1,306 @@
+{
+  "name": "釣魚郵件",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {
+          "maxTokens": 500,
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        304,
+        32
+      ],
+      "id": "7600fa20-8a23-4c0b-aa06-74674357bd94",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "nr4fZNxGAytEzKX8",
+          "name": "OpenAi account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "64685a89-b030-4309-a376-7d9b781efd01",
+              "name": "=sentAt",
+              "value": "={{$now}}\n",
+              "type": "string"
+            },
+            {
+              "id": "afb0c0db-6c2d-4c84-94a4-32b7e76c3675",
+              "name": "subject",
+              "value": "={{$json.subject}}\n",
+              "type": "string"
+            },
+            {
+              "id": "c958a29c-d05f-4a57-91a0-69fd7e95515e",
+              "name": "scenarioId",
+              "value": "={{$json.scenarioId || $json.scenario || ''}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1136,
+        176
+      ],
+      "id": "15932805-8780-4c85-98b1-5c40a90309f5",
+      "name": "Mail Sent"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        304
+      ],
+      "id": "2f990374-e7c4-4bb5-bfe6-eea5aaf4413f",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const roster = Array.isArray($vars.recipients) && $vars.recipients.length\n  ? $vars.recipients\n  : [\n      { email: \"alice@example.com\", name: \"Yujin\", department: \"Finance\", userId: \"E0001\" },\n      { email: \"bob@example.com\",   name: \"Wonyoung\",   department: \"IT\",      userId: \"E0002\" },\n    { email: \"sakura@example.com\",   name: \"Sakura\",   department: \"Human Resource\",      userId: \"E0003\" },\n    { email: \"sakura@example.com\",   name: \"Karina\",   department: \"土建設計部\",      userId: \"E0004\" },\n     { email: \"sakura@example.com\",   name: \"Chaewon\",   department: \"管線設計部\",      userId: \"E0005\" },\n    { email: \"sakura@example.com\",   name: \"Chaewon\",   department: \"採購部\",      userId: \"E0006\" },\n    { email: \"sakura@example.com\",   name: \"Winter\",   department: \"建造營運部\",      userId: \"E0007\" },\n     { email: \"sakura@example.com\",   name: \"kazuha\",   department: \"煉油石化部\",      userId: \"E0008\" },\n    { email: \"sakura@example.com\",   name: \"Tzuyu\",   department: \"集團創研中心\",      userId: \"E0009\" },\n    { email: \"sakura@example.com\",   name: \"Giselle\",   department: \"秘書部\",      userId: \"E0010\" },\n    ];\n\n\nconst active = roster.filter(r => r.active !== false);\n\n\nconst now = new Date();\nconst yyyy = now.getFullYear();\nconst mm   = String(now.getMonth() + 1).padStart(2, '0');\nconst campaignId = `${yyyy}-${mm}`;              \nconst runId = `${campaignId}-${Date.now()}`;      \n\n\nfunction makeSeed(r, idx) {\n  return `${r.userId || r.email}-${campaignId}-${idx}`;\n}\n\nfunction jitterISO(idx, baseMin = 0, spreadMin = 45) {\n  const t = new Date(now.getTime() + (baseMin + (idx % spreadMin)) * 60 * 1000);\n  return t.toISOString();\n}\n\n\nreturn active.map((r, idx) => ({\n  json: {\n    ...r,\n    campaignId,                \n    runId,                      \n    variantSeed: makeSeed(r, idx), \n    companyName: $vars.companyName || '本公司',\n    locale: 'zh-TW',\n\n    sendAt: jitterISO(idx)      \n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -272,
+        176
+      ],
+      "id": "d062ca7d-a81f-4304-9ff4-e0027b0608f4",
+      "name": "Recipient"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        624,
+        416
+      ],
+      "id": "947fa6a6-9e45-434d-9999-6c22239b82c4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const scenarios = [\n  { id: 'hr_notice', label: '人資行政通知演練', weight: 1, subs: [\n  '年度績效評核結果查詢','年假餘額到期提醒','薪資單下載通知',\n  '福利方案異動申請','員工健康檢查報名'\n]},\n  { id: 'card_update',   label: '卡片資訊更新演練', weight: 1, subs: [\n    '卡片額度異常待確認','卡片資料需更新','近期可疑交易提醒','卡片即將到期換卡說明','公司卡籍資料複核'\n  ]},\n  { id: 'pwd_reset',     label: '密碼重設演練',     weight: 1, subs: [\n    '密碼即將到期提醒','偵測到異地登入','新裝置登入驗證','密碼規範更新需重設','近期嘗試登入次數異常'\n  ]},\n  { id: 'acct_notice',   label: '帳務異動通知演練', weight: 1, subs: [\n    '異常費用待釐清','發票資訊補件','退款處理異動','費用分攤調整','月結對帳差異通知'\n  ]},\n  { id: 'it_renewal',    label: '系統權限續期演練', weight: 1, subs: [\n    '角色即將到期','VPN/憑證續期','專案權限調整','資料庫讀取權限續期','工具授權更新'\n  ]},\n  { id: 'doc_share', label: '文件共享演練', weight: 1, subs: [\n  'Teams會議錄影下載','Google Drive文件共用邀請','合同審閱請求',\n  '簡報資料下載','機密文件審批提醒'\n]},\n  { id: 'sec_alert', label: '資安提醒演練', weight: 1, subs: [\n  '雙重驗證失效通知','帳號安全檢查需重新驗證','防毒軟體授權更新',\n  '異地登入警告','安全政策更新需確認'\n]},\n  { id: 'travel_update', label: '差旅系統通知演練', weight: 1, subs: [\n    '行程異動通知','出差申請補件','票券改期說明','報支憑證補登','旅宿變更確認'\n  ]},\n  { id: 'event_notice', label: '內部活動通知演練', weight: 1, subs: [\n  '公司運動會報名','員工旅遊意向調查','節日禮品領取','團購優惠碼通知','年終晚會抽獎名單公佈'\n]},\n{ id: 'reward_promo', label: '獎勵與晉升演練', weight: 1, subs: [\n  '年度表揚名單公布','優秀員工獎金發放確認','晉升資格審核通過通知','特別獎勵旅行兌換','技能認證成績查詢'\n]},\n{ id: 'saas_alert', label: '第三方服務通知演練', weight: 1, subs: [\n  'Slack功能啟用需授權','Zoom錄影下載邀請','GitHub權限更新','Office365授權驗證','ChatGPT團隊帳號續訂提醒'\n]},\n{ id: 'process_incident', label: '流程異常通知演練', weight: 1, subs: [\n  '報銷單退件通知','出勤記錄異常','門禁卡失效','安全演練通知','緊急會議排程變更'\n]},\n    { id: 'training_notice', label: '培訓與課程通知演練', weight: 1, subs: [\n    '強制資安訓練課程開放報名','線上安全測驗即將到期','新進員工教育訓練回覆單',\n    '專案管理系統操作培訓','專業證照補助課程申請'\n  ]},\n  { id: 'sys_maintenance', label: '內部系統維護演練', weight: 1, subs: [\n    '伺服器維護時段公告','EIP 系統升級前資料備份','報表系統停機更新通知',\n    '檔案伺服器存取異常','ERP 系統模組調整說明'\n  ]},\n  { id: 'approval_process', label: '內部申請與審批演練', weight: 1, subs: [\n    '專案費用申請待主管核准','供應商名單異動審核','設備領用單補件通知',\n    '合約審批流程更新','車輛調度單回覆提醒'\n  ]},\n  { id: 'health_safety', label: '健康與安全演練', weight: 1, subs: [\n    '緊急聯絡人資料更新','公司防災演練簽到通知','新冠疫苗施打意願調查',\n    '體檢報告線上查詢','員工保險方案調整'\n  ]},\n  { id: 'cross_dept', label: '跨部門協作演練', weight: 1, subs: [\n    '部門間專案文件確認','協作工具帳號權限更新','任務分派進度回報',\n    '技術審查會議資料補件','共享檔案夾權限異常'\n  ]},\n   { id: 'internal_survey', label: '內部調查與回饋演練', weight: 1, subs: [\n    '員工滿意度匿名問卷','專案回顧意見收集','內部系統功能改善建議表',\n    '餐廳伙食意見調查','部門合作評估調查'\n  ]},\n  { id: 'system_status', label: '系統通知與狀態更新演練', weight: 1, subs: [\n    '報表匯出排程失敗通知','檔案同步衝突提醒','備份空間不足警告',\n    '打卡系統延遲更新公告','內網搜尋功能更新說明'\n  ]},\n  { id: 'admin_support', label: '行政資源與後勤演練', weight: 1, subs: [\n    '辦公室座位調整通知','文具補給需求申請表','公司通行證樣式更新',\n    '停車位申請審核結果','員工餐卡餘額查詢'\n  ]},\n  { id: 'project_support', label: '專案與技術支援演練', weight: 1, subs: [\n    '專案上傳檔案格式異常','測試伺服器憑證過期','API金鑰更新公告',\n    '專案版本回溯申請確認','代辦缺陷修正回報單'\n  ]},\n  { id: 'finance_notice', label: '財務與費用相關演練', weight: 1, subs: [\n    '交通費報支補件通知','專案經費結案清單確認','餐費報支比例調整公告',\n    '部門經費餘額查詢','會議餐點費用分攤異動'\n  ]},\n  { id: 'hr_records', label: '人事活動與紀錄演練', weight: 1, subs: [\n    '年度在職證明申請確認','服務年資證明下載','員工相片更新通知',\n    '出勤紀錄異常補登','工時加班申請審核結果'\n  ]}\n];\n\nconst tones  = ['neutral','formal','urgent_mild','friendly'];\nconst styles = ['concise','bullet','step_by_step','paragraph'];\n\nconst base = 'https://www.google.com';\n\nconst weighted = [];\nfor (const s of scenarios) for (let i=0;i<s.weight;i++) weighted.push(s);\n\nfunction hash(str){ let h=0; for(let i=0;i<str.length;i++) h=(h*31 + str.charCodeAt(i))>>>0; return h; }\n\n\nconst now  = new Date();\nconst yyyy = now.getFullYear();\nconst mm0  = now.getMonth();   \nconst dd   = now.getDate();\nconst weekIndex = Math.floor((dd-1)/7); \n\nconst campaignId = `${yyyy}-${String(mm0+1).padStart(2,'0')}`;\nconst execSalt   = ($vars.campaignSalt || '') + '|' + (items[0]?.json?.runId || '');\n\nreturn items.map((it, idx) => {\n  const uid  = it.json.userId || it.json.email || `U${idx}`;\n\n  const baseIndex = hash(uid) % weighted.length;\n  const rotIndex  = (baseIndex\n                   + (yyyy*12 + mm0)           \n                   + weekIndex                \n                   + dd                        \n                   + (hash(execSalt) % 5)      \n                   ) % weighted.length;\n  const sc = weighted[rotIndex];\n\n  const subIdx = (hash(uid + '|' + campaignId + '|' + weekIndex + '|' + dd + '|' + execSalt) % sc.subs.length);\n  const subScenario = sc.subs[subIdx];\n  const tone  = tones[(hash(uid + '|tone|'  + campaignId + '|' + execSalt) % tones.length)];\n  const style = styles[(hash(uid + '|style|' + campaignId + '|' + execSalt) % styles.length)];\n\n  const uidForLink = it.json.userId || it.json.email || uid;\n  const link = `${base}?uid=${encodeURIComponent(uidForLink)}&sid=${sc.id}`;\n\n  return {\n    json: {\n      ...it.json,\n      campaignId,\n      scenario: sc.label,\n      scenarioId: sc.id,\n      subScenario,\n      tone, style,\n      variantSeed: uid + '|' + campaignId + '|' + execSalt,\n      trainingLink: link,\n      chatInput: `recipientName: ${it.json.name} department: ${it.json.department} scenario: ${sc.label} subScenario: ${subScenario} trainingLink: ${link}`\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        -32
+      ],
+      "id": "51e65692-64cf-4333-88ef-ea95814411eb",
+      "name": "Scenario Picker"
+    },
+    {
+      "parameters": {
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=角色：你是台灣中鼎工程公司 Ctci 員工資訊安全意識「釣魚演練郵件」的撰寫助手。你的任務是依指定「演練情境」與「員工屬性」產出內部演練郵件。\n硬性規範：\n\n1.僅能使用我提供的 trainingLink 作為唯一連結，要有網址，不可以只有超連結；禁止新增或改寫任何其他網址（含縮網址）。\n2.不得要求或引導收件者提供：密碼、OTP、支付資料、個資、住址、身分證/護照、員工編號、生日等。\n3.不得冒用真實對外品牌與實體，可用泛稱或虛構名稱（如「公司內部帳務系統」「企業差旅系統」「中鼎大學系統」「中鼎EIP系統」）。\n4.內文尾段必須標註：「笑死此為公司資安演練郵件，點擊後將前往訓練頁面」。\n5.文字長度 80–200 字，自然專業，不恐嚇、不卡詐。\n6.允許根據部門/情境調整措辭與迷惑點（如「卡片額度異常」「密碼到期」「差旅申請待補件」）。\n7.只輸出單一 JSON，結構固定：\n{ \"subject\": \"...\", \"bodyText\": \"...\", \"bodyHtml\": \"...\" }\n8.bodyHtml 與 bodyText 內容一致（HTML 版允許 <p>…</p><br>），且所有連結只使用 trainingLink。\n9.內容要多樣化：可調整語氣、切入點、主旨模板與措辭；同一情境不同收件人仍應顯著不同。\n10.若情境或輸入資訊不完整，自行合理補足內部系統泛稱，但仍不可增加外部品牌或任何新連結。\n11.您可以自由選擇要撰寫中文或英文韓文郵件。"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "=請依下列參數產生一封演練郵件（輸出為單一 JSON）\nrecipientName: {{$json.name}}\ndepartment: {{$json.department}}\nscenarioId: {{$json.scenarioId}}\nscenarioLabel: {{$json.scenario}}\nsubScenario: {{$json.subScenario || ({\"card_update\":\"卡片資料需更新\",\"pwd_reset\":\"密碼即將到期提醒\",\"acct_notice\":\"帳務異動待釐清\",\"it_renewal\":\"角色/權限即將到期\",\"travel_update\":\"行程異動/申請補件\"}[$json.scenarioId] || \"一般提醒\")}}\ntrainingLink: {{$json.trainingLink}}\ncompanyName: {{$json.companyName || $vars.companyName || \"本公司\"}}\nlocale: zh-TW\ntone: {{$json.tone || \"neutral\"}}\nstyle: {{$json.style || \"concise\"}}\nvariantSeed: {{$json.variantSeed || ($json.userId || $json.email || \"seed\")}}\n\n生成要求：\n1) 以 scenarioId + subScenario 作為情境核心；不同收件人/不同月份需呈現顯著差異，避免模板化與重複句式，可依 tone/style 做不同寫法。\n2) 僅可使用 trainingLink；嚴禁新增其他 URL/縮網址/電話/Email。\n3) 合規：不得要求或引導收件者提供密碼、OTP、信用卡/支付資料、身分證/護照、銀行帳號、地址或電話等個資；不得要求登入；不得冒用外部品牌。\n4) 80–200 字，語氣自然、專業，不恐嚇。可使用條列或步驟（依 style 決定）。\n5) 結尾務必加：「此為公司資安演練郵件，點擊後將前往訓練頁面」。\n\n多樣性規則：\n- 依 style 決定結構：concise=單段落；bullet=條列3~5點；step_by_step=步驟2~4步；paragraph=兩段式。\n- 依 tone 調整語氣：neutral 平實、formal 正式、urgent_mild 溫和提醒、friendly 親和。\n- variantSeed 若為不同值，請在主旨與第一句用不同說法（避免重複模板與開頭）。\n\n請以單一 JSON 輸出：\n{ \"subject\": \"...\", \"bodyText\": \"...\", \"bodyHtml\": \"...\" }\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        352,
+        -128
+      ],
+      "id": "553096f0-eb16-486c-b027-4b4f7dccb05a",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "jsCode": "function firstNonEmpty() {\n  for (let i = 0; i < arguments.length; i++) {\n    const v = arguments[i];\n    if (v !== undefined && v !== null && v !== '') return v;\n  }\n  return '';\n}\n\nfunction parseAi(raw) {\n  if (!raw) return {};\n  if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return {}; } }\n  return (typeof raw === 'object') ? raw : {};\n}\n\nfunction pick(idx, node, key) {\n  try {\n    const ref = $item(idx, node);\n    return (ref && ref.json && ref.json[key]) ? ref.json[key] : '';\n  } catch { return ''; }\n}\n\nfunction linkFromAI(ai) {\n  const s = (ai && ai.bodyHtml ? ai.bodyHtml : '') + '\\n' + (ai && ai.bodyText ? ai.bodyText : '');\n  const m = s.match(/https?:\\/\\/[^\\s\"'<>]+/i);\n  return m ? m[0] : '';\n}\n\nconst fallbackTo   = firstNonEmpty($vars.defaultTo, '');\nconst fallbackLink = firstNonEmpty($vars.trainingLinkDefault, '');\n\nconst OUT = items.map((it, idx) => {\n  let aiRaw = firstNonEmpty(it.json.ai, pick(idx, '驗證', 'ai'), it.json.text, pick(idx, '驗證', 'text'));\n  let ai = parseAi(aiRaw);\n\n  const email        = firstNonEmpty(it.json.email, it.json.to, pick(idx,'驗證','email'), pick(idx,'Scenario Picker','email'), pick(idx,'Recipient','email'), fallbackTo);\n  const name         = firstNonEmpty(it.json.name, pick(idx,'驗證','name'), pick(idx,'Scenario Picker','name'), pick(idx,'Recipient','name'), '');\n  const trainingLink = firstNonEmpty(it.json.trainingLink, pick(idx,'驗證','trainingLink'), pick(idx,'Scenario Picker','trainingLink'), linkFromAI(ai), fallbackLink);\n  const scenarioId   = firstNonEmpty(it.json.scenarioId, pick(idx,'驗證','scenarioId'), pick(idx,'Scenario Picker','scenarioId'), '');\n  const scenarioLbl  = firstNonEmpty(it.json.scenario,   pick(idx,'驗證','scenario'),   pick(idx,'Scenario Picker','scenario'),   '');\n\n  const bodyHtml = (ai && typeof ai.bodyHtml === 'string' && ai.bodyHtml.trim())\n    ? ai.bodyHtml\n    : (ai && ai.bodyText ? '<p>' + String(ai.bodyText).replace(/\\n/g,'<br>') + '</p>' : '');\n\n  const html =\n    '<p>Hi ' + (name || '') + '：</p>\\n' +\n    bodyHtml + '\\n' +\n    '<p><a href=\"' + trainingLink + '\">前往演練訓練頁面</a></p>\\n' +\n    '<hr>\\n' +\n    '<small>此為公司資安演練郵件；所有連結僅導向內部訓練網站。</small>';\n\n  const text    = (ai && ai.bodyText ? ai.bodyText : bodyHtml.replace(/<[^>]+>/g,'')).trim();\n  const subject = firstNonEmpty(ai && ai.subject ? ai.subject.trim() : '', '資安意識演練（' + (scenarioLbl || scenarioId || '') + '）');\n\n  return {\n    json: {\n      subject,\n      text,\n      html: html.trim(),\n      trainingLink,\n      _compose_fallbacks: {\n        usedDefaultTo:  !firstNonEmpty(it.json.email, it.json.to, pick(idx,'驗證','email'), pick(idx,'Scenario Picker','email'), pick(idx,'Recipient','email')),\n        usedDefaultLink:!firstNonEmpty(it.json.trainingLink, pick(idx,'驗證','trainingLink'), pick(idx,'Scenario Picker','trainingLink'), linkFromAI(ai))\n      }\n    }\n  };\n}).filter(function (row) { return !!row; });\n\nreturn OUT;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        384
+      ],
+      "id": "e87e1a23-132d-4018-894b-975f98bdc6d9",
+      "name": "Compose Email"
+    },
+    {
+      "parameters": {
+        "fromEmail": "CTCI_Notice@ctci.com",
+        "toEmail": "alan.chang01@ctci.com",
+        "subject": "Notice",
+        "html": "=={{$json.html}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1136,
+        400
+      ],
+      "id": "b3c2684f-b2d1-4600-a2e0-50ea3aab3516",
+      "name": "Send email",
+      "webhookId": "f047e6fc-921f-4c09-ac1f-5b6f5dcdd3e7",
+      "credentials": {
+        "smtp": {
+          "id": "cKOZFg9qj04o0zbJ",
+          "name": "SMTP account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseAi(raw) {\n  if (!raw) return {};\n  if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return {}; } }\n  return (typeof raw === 'object') ? raw : {};\n}\nfunction from(idx, node) {\n  try { return $item(idx, node)?.json || {}; } catch { return {}; }\n}\n\nfunction scrubSensitive(s) {\n  if (!s) return s;\n  s = s.replace(\n    /(請|敬請|煩請|需要).{0,12}(提供|回覆|填寫|上傳|提交|告知|回傳|傳送|寄送|附上).{0,12}(密碼|一次性驗證碼|OTP|信用卡(?:號)?|卡號|CVV|身分證|護照|銀行帳(?:號)?|匯款|支付(?:資訊|資料)?|住址|地址|電話|手機|出生日期)[^。]*。?/gi,\n    '請勿在郵件中提供任何敏感資訊；如需後續操作，請依內部訓練頁面說明進行。'\n  );\n  s = s.replace(/\\b(OTP|一次性驗證碼|密碼|信用卡(?:號)?|卡號|CVV|銀行帳(?:號)?|身分證|護照)\\b/gi, '敏感資訊');\n  return s;\n}\n\nreturn items.map((it, idx) => {\n  const raw = it.json.text ?? it.json.response ?? it.json.data ?? Object.values(it.json)[0];\n  const ai = parseAi(raw);\n\n  const sp = from(idx, 'Scenario Picker');\n  const rc = from(idx, 'Recipient');\n  const trainingLink = sp.trainingLink || it.json.trainingLink || '';\n\n  if (!ai.subject || !ai.bodyText || !ai.bodyHtml)\n    throw new Error('缺少必要鍵 subject/bodyText/bodyHtml');\n\n  const urlRegex = /(https?:\\/\\/[^\\s\"'<>()]+)/gi;\n  const allUrls = [...(ai.bodyText.match(urlRegex) || []), ...(ai.bodyHtml.match(urlRegex) || [])];\n  const bad = allUrls.filter(u => !u.startsWith(trainingLink));\n  if (bad.length) throw new Error('偵測到未授權連結：' + bad.join(', '));\n\n  const ACTION = '(提供|回覆|填寫|上傳|提交|告知|回傳|傳送|寄送|附上)';\n  const SECRET = '(密碼|一次性驗證碼|OTP|信用卡(?:號)?|卡號|CVV|身分證|護照|銀行帳(?:號)?|匯款|支付(?:資訊|資料)?|住址|地址|電話|手機|出生日期)';\n  const forbid = new RegExp(`${ACTION}.{0,12}${SECRET}|${SECRET}.{0,12}${ACTION}`, 'i');\n  if (forbid.test((ai.bodyText || '') + '\\n' + (ai.bodyHtml || ''))) {\n    ai.bodyText = scrubSensitive(ai.bodyText);\n    ai.bodyHtml = scrubSensitive(ai.bodyHtml);\n  }\n\n  const must = /此為公司資安演練郵件/;\n  if (!must.test(ai.bodyText)) ai.bodyText = (ai.bodyText || '') + '\\n\\n此為公司資安演練郵件，點擊後將前往訓練頁面。';\n  if (!must.test(ai.bodyHtml)) ai.bodyHtml = (ai.bodyHtml || '') + '<br><small>此為公司資安演練郵件，點擊後將前往訓練頁面。</small>';\n\n  return {\n    json: {\n      ...it.json,\n      ...rc,\n      ...sp,\n      ai\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -128
+      ],
+      "id": "57e4ffcc-8ad3-4ba2-a1c2-3d73eb94620f",
+      "name": "驗證"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Recipient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recipient": {
+      "main": [
+        [
+          {
+            "node": "Scenario Picker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Compose Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scenario Picker": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "驗證",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Email": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mail Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "驗證": {
+      "main": [
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e82e0b9c-7ab1-4e66-9c81-3cda4ee3d449",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0843de69255960b7f2f597af5158e8a3619f624ace8846dad67831b6b27470f6"
+  },
+  "id": "QctaIO2WxsY7XeRn",
+  "tags": []
+}
